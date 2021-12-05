@@ -1,4 +1,4 @@
-//Day 1, puzzle 1
+//Day 1, puzzle 2
 
 use std::fs::File;
 use std::io::{self, BufRead};
