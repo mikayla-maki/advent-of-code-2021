@@ -52,21 +52,21 @@ fn main() -> io::Result<()> {
 
 fn build_line(from: Point, to: Point) -> Vec<Point> {
     if to.0 > from.0 && to.1 == from.1 {
-        //Count up in x
+        //Count up in x  →
         let mut result = vec![(0, to.1); to.0 - from.0 + 1];
         for i in from.0..=to.0 {
             result[i - from.0].0 = i;
         }
         return result;
     } else if to.1 > from.1 && to.0 == from.0 {
-        //Count up in y
+        //Count up in y ↓ 
         let mut result = vec![(to.0, 0); to.1 - from.1 + 1];
         for i in from.1..=to.1 {
             result[i - from.1].1 = i;
         }
         return result;
     } else if to.0 < from.0 && to.1 == from.1 {
-        //Count down in x
+        //Count down in x 
         let mut result = vec![(0, to.1); from.0 - to.0 + 1];
         for i in to.0..=from.0 {
             result[i - to.0].0 = i;
