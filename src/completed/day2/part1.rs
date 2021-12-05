@@ -9,24 +9,20 @@ fn main() -> io::Result<()> {
 
     let mut depth = 0;
     let mut position = 0;
-    let mut aim = 0;
 
     for line in reader.lines() {        
         if let [command, val] = &line.unwrap().split(" ").collect::<Vec<&str>>()[..] {
             let val = val.parse::<usize>().unwrap();
             match &command[..] {
-                "forward" => { 
-                    position += val;
-                    depth += aim * val;
-                },
-                "down" => aim += val,
-                "up" => aim -= val,
+                "forward" => position += val,
+                "down" => depth += val,
+                "up" => depth -= val,
                 &_ => println!("this should be impossible")
             }
        }
         
     }
-    println!("Depth {}, position {}, aim, {}, multiplied {}", depth, position, aim, depth * position);
+    println!("Depth {}, position {}, multiplied {}", depth, position, depth * position);
 
     Ok(())
 }
