@@ -1,113 +1,97 @@
-//Day 1, puzzle 1
+//Day 4, puzzle 2
 
 use std::fs::File;
 use std::io::{self, BufRead};
 
-const BITS: usize = 12;
+const BOARD_SIZE: usize = 5;
 
+type BoardValue = (i32, bool);
+type Board = ([Vec<BoardValue>; BOARD_SIZE], bool);
 
 fn main() -> io::Result<()> {
-    let file = File::open("./input/day3/input.txt")?;
+    let file = File::open("./input/day4/input.txt")?;
     let reader = io::BufReader::new(file);
+    let mut line_reader = reader.lines();
+    
+    //A list of 2D indexes to scan for scoring.
+    let scoring_scans = [
+        [(0,0),(1,0),(2,0),(3,0),(4,0)], //All columns
+        [(0,1),(1,1),(2,1),(3,1),(4,1)],
+        [(0,2),(1,2),(2,2),(3,2),(4,2)],
+        [(0,3),(1,3),(2,3),(3,3),(4,3)],
+        [(0,4),(1,4),(2,4),(3,4),(4,4)],
 
-    let num_of_bits = BITS;
-    //Format:
-    //array index = position in bit string
-    //first tuple position = 0 count
-    //second tuple position = 1 count
-    let mut bit_counts = [(0, 0); BITS];
-    let mut diagnostic_values = vec![];
+        [(0,0),(0,1),(0,2),(0,3),(0,4)], //All rows
+        [(1,0),(1,1),(1,2),(1,3),(1,4)],
+        [(2,0),(2,1),(2,2),(2,3),(2,4)],
+        [(3,0),(3,1),(3,2),(3,3),(3,4)],
+        [(4,0),(4,1),(4,2),(4,3),(4,4)],
+    ];
 
-    for line in reader.lines() {        
-        //parse bits
-        let bits = line.unwrap()
-        .chars()
-        .map(|c| {
-            match c {
-                '1' => true,
-                '0' => false,
-                _ => {println!("This should be impossible"); false }
-            }
-        })
-        .collect::<Vec<bool>>();
-
-        for i in 0..num_of_bits {
-            match bits[i] {
-                false => bit_counts[i].0 += 1,
-                true => bit_counts[i].1 += 1,
-            }
-        }
-
-        diagnostic_values.push(bits);
+    //Parse draws
+    let draws = line_reader.next().unwrap().unwrap().split(",").map(|str| str.parse::<i32>().unwrap()).collect::<Vec<i32>>();
+    
+    //parse boards
+    let mut num_of_boards = 0;
+    let mut boards: Vec<Board> = vec![];
+    while let Some(_) = line_reader.next() {
+        let mut board = Board::default();
+        for i in 0..BOARD_SIZE {
+            let line = line_reader.next().unwrap().unwrap().split_whitespace().map(|str| (str.parse::<i32>().unwrap(), false)).collect::<Vec<BoardValue>>();
+            board.0[i] = line;
+        }    
+        boards.push(board);
+        num_of_boards += 1;
     }
 
-    let ox_value_vec = get_diagnostic_value(|(bit_counts, i)| {
-        Box::new(move |bits| { 
-            if bit_counts[i].1 >= bit_counts[i].0 {
-                bits[i] == true
-            } else  {
-                bits[i] == false
-            }
-         })
-    }, 0, diagnostic_values.clone(), bit_counts);
+    let mut wins = 0;
 
-    let scrubber_rating_vec = get_diagnostic_value(|(bit_counts, i)| {
-        Box::new(move |bits| { 
-            if bit_counts[i].1 >= bit_counts[i].0 {
-                bits[i] == false
-            } else  {
-                bits[i] == true
-            }
-         })
-    }, 0, diagnostic_values.clone(), bit_counts);
-
-    let scrubber_rating = convert_vec_to_int(scrubber_rating_vec);
-    let ox_value = convert_vec_to_int(ox_value_vec);
-
-    println!("ox rating: {}, CO2 rating: {}, final: {}", ox_value,scrubber_rating, ox_value * scrubber_rating);
-    Ok(())
-}
-
-fn get_diagnostic_value<F>(
-        bit_criteria: F,
-        bit_index: usize,
-        mut diagnostic_values: Vec<Vec<bool>>,
-        bit_counts: [(i32, i32); BITS]
-    ) -> Vec<bool> 
-    where F: Fn((
-            [(i32, i32); BITS],
-            usize
-        )) -> Box<dyn Fn(&Vec<bool>) -> bool>
-    {
-    let mut next_bit_counts = [(0,0); BITS];
-
-    diagnostic_values = diagnostic_values.into_iter()
-        .filter(bit_criteria((bit_counts, bit_index)))
-        .inspect(|bits| {
-            for i in 0..BITS {
-                match bits[i] {
-                    false => next_bit_counts[i].0 += 1,
-                    true => next_bit_counts[i].1 += 1,
+    //Determine which board is the winning board
+    'outer: for call in draws {
+        'boards: for board in &mut boards {
+            //If the board hasn't already won
+            if !board.1 {
+                //Mark cell in the board
+                for line in board.0.iter_mut() {
+                    for cell in line.iter_mut() {
+                        if cell.0 == call {
+                            cell.1 = true;
+                        }
+                    }
+                }
+                //Check if won
+                for scan in scoring_scans {
+                    let mut won = true;
+                    for (i, j) in scan {
+                        won = board.0[i][j].1 && won;
+                    }
+                    //If won, score
+                    if won {
+                        wins += 1;
+                        board.1 = true;
+                        if wins >= num_of_boards {
+                            let mut score = 0;
+                            for line in board.0.iter() {
+                                for cell in line.iter() {
+                                    match cell {
+                                        (value, false) => score += value,
+                                        _ => ()
+                                    }
+                                }
+                            }
+                            println!("Winner! The score is: {}", score * call);
+                            break 'outer;
+                        } else {
+                            continue 'boards;
+                        }
+                    } 
                 }
             }
-        })
-        .collect();
-    
-    if diagnostic_values.len() == 1 {
-        return diagnostic_values[0].clone();
-    } else {
-       return get_diagnostic_value(bit_criteria, bit_index + 1, diagnostic_values, next_bit_counts);
-     }
-}
-
-fn convert_vec_to_int(bits: Vec<bool>) -> i32 {
-    let mut tmp = 0;
-    for bit in bits {
-        tmp = tmp << 1;
-        match bit {
-            true => tmp = tmp | 1,
-            false => tmp = tmp | 0,
         }
     }
-    tmp
+
+    //31185 TOO HIGH
+    //378 TOO LOW
+
+    Ok(())
 }
